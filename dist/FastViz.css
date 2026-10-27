@@ -1,0 +1,23 @@
+.fast-viz-container {
+    box-sizing: border-box;
+    position: relative;
+    width: 100%;
+    min-height: 250px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+    border-radius: 8px;
+    transition: box-shadow 0.2s ease;
+}
+
+.fast-viz-container canvas {
+    border-radius: 8px;
+}
+
+/* Mobile responsive touch optimization */
+@media (max-width: 768px) {
+    .fast-viz-container {
+        min-height: 300px;
+    }
+}

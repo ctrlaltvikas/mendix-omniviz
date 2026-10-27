@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<widget id="com.mendix.widget.custom.fastviz.FastViz" pluginWidget="true" needsEntityContext="true"
+        xmlns="http://www.mendix.com/widget/1.0/">
+    <name>FastViz Visualizations &amp; Maps</name>
+    <description>Blazing fast, responsive data visualizations and geospatial maps powered by ECharts and D3.</description>
+    <icon/>
+    <properties>
+        <!-- TAB 1: CHART TYPE & THEME -->
+        <propertyGroup caption="Chart Settings">
+            <property key="chartType" type="enumeration" defaultValue="bar">
+                <caption>Chart Type</caption>
+                <description>Select the visualization family</description>
+                <enumerationValues>
+                    <enumerationValue key="bar">Bar (Vertical)</enumerationValue>
+                    <enumerationValue key="horizontalBar">Horizontal Bar</enumerationValue>
+                    <enumerationValue key="stackedBar">Stacked Bar</enumerationValue>
+                    <enumerationValue key="line">Line / Trend</enumerationValue>
+                    <enumerationValue key="area">Area (Filled Gradient)</enumerationValue>
+                    <enumerationValue key="stackedArea">Stacked Area</enumerationValue>
+                    <enumerationValue key="scatter">Scatter / Bubble Plot</enumerationValue>
+                    <enumerationValue key="pie">Pie / Donut</enumerationValue>
+                    <enumerationValue key="rose">Nightingale Rose Chart</enumerationValue>
+                    <enumerationValue key="radar">Radar / Spider Chart</enumerationValue>
+                    <enumerationValue key="gauge">Gauge / Speedometer</enumerationValue>
+                    <enumerationValue key="funnel">Funnel / Conversion</enumerationValue>
+                    <enumerationValue key="heatmap">Heatmap Matrix</enumerationValue>
+                    <enumerationValue key="treemap">Treemap (Hierarchical)</enumerationValue>
+                    <enumerationValue key="sunburst">Sunburst Chart</enumerationValue>
+                    <enumerationValue key="sankey">Sankey (Flow Diagram)</enumerationValue>
+                    <enumerationValue key="candlestick">Candlestick (Financial OHLC)</enumerationValue>
+                    <enumerationValue key="geoMap">Geospatial Map (Choropleth)</enumerationValue>
+                    <enumerationValue key="geoScatter">Geospatial Scatter / Bubble Map</enumerationValue>
+                </enumerationValues>
+            </property>
+
+            <property key="themePreset" type="enumeration" defaultValue="uberDark">
+                <caption>Theme &amp; Palette</caption>
+                <description>Visual styling preset inspired by Uber and modern design systems</description>
+                <enumerationValues>
+                    <enumerationValue key="uberDark">Uber Dark (Signature High Contrast)</enumerationValue>
+                    <enumerationValue key="cleanModern">Enterprise Clean Light</enumerationValue>
+                    <enumerationValue key="cyberNeon">Cyberpunk Neon</enumerationValue>
+                    <enumerationValue key="d3Viridis">D3 Viridis Gradient</enumerationValue>
+                    <enumerationValue key="d3Turbo">D3 Turbo Multi-hue</enumerationValue>
+                    <enumerationValue key="pastel">Pastel Minimal</enumerationValue>
+                </enumerationValues>
+            </property>
+
+            <property key="title" type="string" required="false" defaultValue="">
+                <caption>Title</caption>
+                <description>Chart header title</description>
+            </property>
+
+            <property key="subtitle" type="string" required="false" defaultValue="">
+                <caption>Subtitle</caption>
+                <description>Chart subtitle</description>
+            </property>
+
+            <property key="height" type="string" defaultValue="420px">
+                <caption>Widget Height</caption>
+                <description>Height in px or % (e.g., 420px, 100%, 500px)</description>
+            </property>
+        </propertyGroup>
+
+        <!-- TAB 2: DATA INGESTION -->
+        <propertyGroup caption="Data Ingestion">
+            <property key="dataRoute" type="enumeration" defaultValue="mendix">
+                <caption>Data Ingestion Mode</caption>
+                <description>Select Mendix datasource (XPath/Database/Microflow) or direct REST API / JSON</description>
+                <enumerationValues>
+                    <enumerationValue key="mendix">Mendix Datasource (Entity List)</enumerationValue>
+                    <enumerationValue key="api">Direct REST API / JSON Route</enumerationValue>
+                </enumerationValues>
+            </property>
+
+            <!-- Route A: Mendix Datasource -->
+            <property key="mendixDatasource" type="datasource" isList="true" required="false">
+                <caption>Mendix Datasource</caption>
+                <description>Entity list loaded via XPath, Database, Microflow, or Nanoflow</description>
+            </property>
+
+            <property key="xAttribute" type="attribute" dataSource="mendixDatasource" required="false">
+                <caption>X / Dimension / Category / Region Name</caption>
+                <description>Primary dimension or category attribute</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
+                    <attributeType name="DateTime"/>
+                    <attributeType name="Integer"/>
+                    <attributeType name="Long"/>
+                    <attributeType name="Decimal"/>
+                </attributeTypes>
+            </property>
+
+            <property key="yAttribute" type="attribute" dataSource="mendixDatasource" required="false">
+                <caption>Y / Measure / Value</caption>
+                <description>Numerical value / measure for the chart</description>
+                <attributeTypes>
+                    <attributeType name="Integer"/>
+                    <attributeType name="Long"/>
+                    <attributeType name="Decimal"/>
+                </attributeTypes>
+            </property>
+
+            <property key="seriesAttribute" type="attribute" dataSource="mendixDatasource" required="false">
+                <caption>Series / Group By (Optional)</caption>
+                <description>Category to group multiple series (e.g. Region, Department, Product)</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
+                </attributeTypes>
+            </property>
+
+            <property key="secondaryAttribute" type="attribute" dataSource="mendixDatasource" required="false">
+                <caption>Secondary Measure (Bubble Size / Target / Max)</caption>
+                <description>Used for scatter bubble size, gauge max target, or secondary metrics</description>
+                <attributeTypes>
+                    <attributeType name="Integer"/>
+                    <attributeType name="Long"/>
+                    <attributeType name="Decimal"/>
+                </attributeTypes>
+            </property>
+
+            <property key="latAttribute" type="attribute" dataSource="mendixDatasource" required="false">
+                <caption>Latitude (For Geo Maps)</caption>
+                <description>Latitude coordinate for geo scatter maps (-90 to 90)</description>
+                <attributeTypes>
+                    <attributeType name="Decimal"/>
+                    <attributeType name="String"/>
+                </attributeTypes>
+            </property>
+
+            <property key="lngAttribute" type="attribute" dataSource="mendixDatasource" required="false">
+                <caption>Longitude (For Geo Maps)</caption>
+                <description>Longitude coordinate for geo scatter maps (-180 to 180)</description>
+                <attributeTypes>
+                    <attributeType name="Decimal"/>
+                    <attributeType name="String"/>
+                </attributeTypes>
+            </property>
+
+            <property key="tooltipAttribute" type="attribute" dataSource="mendixDatasource" required="false">
+                <caption>Custom Tooltip / Label Attribute</caption>
+                <description>Custom tooltip text or HTML expression</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
+                </attributeTypes>
+            </property>
+
+            <!-- Route B: REST API / Dynamic JSON -->
+            <property key="apiUrlOrJson" type="expression" required="false">
+                <caption>API Endpoint URL or JSON String</caption>
+                <description>REST API URL to fetch or dynamic JSON string from Microflow</description>
+                <returnType type="String"/>
+            </property>
+
+            <property key="apiRefreshInterval" type="integer" defaultValue="0">
+                <caption>Auto Refresh Interval (Seconds)</caption>
+                <description>0 to disable; otherwise polls the API every N seconds for real-time dashboards</description>
+            </property>
+
+            <property key="jsonPathRoot" type="string" required="false" defaultValue="">
+                <caption>JSON Path Root (Optional)</caption>
+                <description>Root array property (e.g. 'data', 'items', 'records') if JSON is wrapped</description>
+            </property>
+        </propertyGroup>
+
+        <!-- TAB 3: MAP SETTINGS -->
+        <propertyGroup caption="Map &amp; Geospatial">
+            <property key="mapGeoJsonUrl" type="expression" required="false">
+                <caption>Custom GeoJSON URL</caption>
+                <description>URL to fetch custom country/state/city GeoJSON. Defaults to built-in world map if left blank.</description>
+                <returnType type="String"/>
+            </property>
+
+            <property key="mapVisualMin" type="integer" defaultValue="0">
+                <caption>Map Value Range Min</caption>
+                <description>Lower boundary for choropleth color scale</description>
+            </property>
+
+            <property key="mapVisualMax" type="integer" defaultValue="1000">
+                <caption>Map Value Range Max</caption>
+                <description>Upper boundary for choropleth color scale</description>
+            </property>
+
+            <property key="mapRoam" type="boolean" defaultValue="true">
+                <caption>Map Zoom &amp; Pan</caption>
+                <description>Allow users to pinch-zoom and pan the map on mobile and desktop</description>
+            </property>
+        </propertyGroup>
+
+        <!-- TAB 4: RESPONSIVENESS & INTERACTIVITY -->
+        <propertyGroup caption="Responsive &amp; Controls">
+            <property key="legendPosition" type="enumeration" defaultValue="top">
+                <caption>Legend Position</caption>
+                <description>Where the chart legend should render</description>
+                <enumerationValues>
+                    <enumerationValue key="top">Top</enumerationValue>
+                    <enumerationValue key="bottom">Bottom</enumerationValue>
+                    <enumerationValue key="left">Left</enumerationValue>
+                    <enumerationValue key="right">Right</enumerationValue>
+                    <enumerationValue key="none">Hidden</enumerationValue>
+                </enumerationValues>
+            </property>
+
+            <property key="enableDataZoom" type="boolean" defaultValue="true">
+                <caption>Mobile Pinch-Zoom &amp; Slider</caption>
+                <description>Enables mobile pinch-to-zoom, touch panning, and bottom slider for dense charts</description>
+            </property>
+
+            <property key="showToolbox" type="boolean" defaultValue="true">
+                <caption>Show Toolbox (Save Image / Data View)</caption>
+                <description>Displays export image, zoom restore, and data view buttons</description>
+            </property>
+
+            <property key="smoothCurves" type="boolean" defaultValue="true">
+                <caption>Smooth Spline Curves (Line/Area)</caption>
+                <description>Smooth curves vs straight lines</description>
+            </property>
+
+            <property key="donutRatio" type="string" defaultValue="45%">
+                <caption>Pie Donut Inner Radius</caption>
+                <description>Inner radius for Pie/Donut (e.g. 0% for full pie, 50% for donut)</description>
+            </property>
+
+            <property key="onClickAction" type="action" dataSource="mendixDatasource" required="false">
+                <caption>On Data Point Click Action</caption>
+                <description>Microflow or Nanoflow to execute when a user clicks a bar, point, pie slice, or map pin</description>
+            </property>
+        </propertyGroup>
+
+        <!-- TAB 5: ADVANCED JSON OVERRIDE -->
+        <propertyGroup caption="Advanced Options">
+            <property key="customJsonOptions" type="expression" required="false">
+                <caption>Custom ECharts JSON Override</caption>
+                <description>Advanced: dynamic JSON expression deep-merged into ECharts options for 100% custom styling</description>
+                <returnType type="String"/>
+            </property>
+        </propertyGroup>
+    </properties>
+</widget>

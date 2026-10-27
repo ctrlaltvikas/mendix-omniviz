@@ -1,0 +1,33 @@
+{
+  "name": "fast-viz",
+  "widgetName": "FastViz",
+  "version": "1.0.0",
+  "description": "Blazing fast, responsive data visualization & maps widget for Mendix powered by ECharts and D3",
+  "author": "Antigravity",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "watch": "node scripts/watch.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "d3": "^7.9.0",
+    "echarts": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "archiver": "^7.0.1",
+    "esbuild": "^0.20.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.4.2"
+  },
+  "peerDependencies": {
+    "react": ">=17.0.0",
+    "react-dom": ">=17.0.0"
+  }
+}
