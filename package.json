@@ -1,9 +1,9 @@
 {
-  "name": "fast-viz",
-  "widgetName": "FastViz",
+  "name": "mendix-omniviz",
+  "widgetName": "OmniViz",
   "version": "1.0.0",
-  "description": "Blazing fast, responsive data visualization & maps widget for Mendix powered by ECharts and D3",
-  "author": "Antigravity",
+  "description": "Universal, blazing-fast data visualizations & geospatial maps widget for Mendix powered by ECharts and D3",
+  "author": "ctrlaltvikas",
   "license": "Apache-2.0",
   "scripts": {
     "build": "node scripts/build.js",

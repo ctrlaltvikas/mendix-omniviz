@@ -5,7 +5,7 @@ import { getThemeConfig } from "./services/ThemeEngine";
 import { GeoMapService } from "./services/GeoMapService";
 import { D3Formatters } from "./services/D3Formatters";
 
-export interface FastVizProps {
+export interface OmniVizProps {
     chartType: string;
     themePreset: string;
     title?: string;
@@ -36,7 +36,7 @@ export interface FastVizProps {
     customJsonOptions?: { value?: string };
 }
 
-export const FastViz: FC<FastVizProps> = (props) => {
+export const OmniViz: FC<OmniVizProps> = (props) => {
     const [apiData, setApiData] = useState<any>(null);
     const [mapReady, setMapReady] = useState<boolean>(false);
 
@@ -80,7 +80,7 @@ export const FastViz: FC<FastVizProps> = (props) => {
                     setApiData(json);
                 }
             } catch (err) {
-                console.error("FastViz: API Route Fetch failed:", err);
+                console.error("OmniViz: API Route Fetch failed:", err);
             }
         };
 
@@ -320,7 +320,7 @@ export const FastViz: FC<FastVizProps> = (props) => {
                 const customObj = JSON.parse(props.customJsonOptions.value);
                 return Object.assign({}, baseOption, customObj);
             } catch (e) {
-                console.warn("FastViz: Custom JSON Override parsing failed", e);
+                console.warn("OmniViz: Custom JSON Override parsing failed", e);
             }
         }
 
@@ -371,4 +371,4 @@ export const FastViz: FC<FastVizProps> = (props) => {
     );
 };
 
-export default FastViz;
+export default OmniViz;

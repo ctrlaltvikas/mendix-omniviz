@@ -111,7 +111,7 @@ export class GeoMapService {
             registeredMaps.add(mapName);
             return true;
         } catch (err) {
-            console.warn(`FastViz: Could not load GeoJSON from ${url}, falling back to default map`, err);
+            console.warn(`OmniViz: Could not load GeoJSON from ${url}, falling back to default map`, err);
             this.initDefaultMap();
             return false;
         }

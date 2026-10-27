@@ -1,4 +1,4 @@
-.fast-viz-container {
+.omni-viz-container {
     box-sizing: border-box;
     position: relative;
     width: 100%;
@@ -11,13 +11,13 @@
     transition: box-shadow 0.2s ease;
 }
 
-.fast-viz-container canvas {
+.omni-viz-container canvas {
     border-radius: 8px;
 }
 
 /* Mobile responsive touch optimization */
 @media (max-width: 768px) {
-    .fast-viz-container {
+    .omni-viz-container {
         min-height: 300px;
     }
 }

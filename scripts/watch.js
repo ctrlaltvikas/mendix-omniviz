@@ -11,22 +11,22 @@ async function watch() {
         fs.mkdirSync(distDir, { recursive: true });
     }
 
-    console.log("👀 [FastViz] Watching for changes...");
+    console.log("👀 [OmniViz] Watching for changes...");
 
     const ctx = await esbuild.context({
-        entryPoints: [path.join(srcDir, "FastViz.tsx")],
+        entryPoints: [path.join(srcDir, "OmniViz.tsx")],
         bundle: true,
         minify: false,
         sourcemap: true,
         platform: "browser",
         target: ["es2020"],
         format: "cjs",
-        outfile: path.join(distDir, "FastViz.js"),
+        outfile: path.join(distDir, "OmniViz.js"),
         external: ["react", "react-dom"]
     });
 
     await ctx.watch();
-    console.log("🚀 [FastViz] Initial watch build ready.");
+    console.log("🚀 [OmniViz] Initial watch build ready.");
 }
 
 watch().catch(err => {

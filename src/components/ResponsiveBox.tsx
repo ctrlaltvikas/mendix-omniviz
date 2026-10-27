@@ -77,7 +77,7 @@ export const ResponsiveBox: FC<ResponsiveBoxProps> = ({
 
     return (
         <div
-            className={`fast-viz-container ${className || ""}`}
+            className={`omni-viz-container ${className || ""}`}
             style={{
                 width: "100%",
                 height: height || "420px",

@@ -1,13 +1,18 @@
-# FastViz: Modern High-Performance Visualization & Maps Widget for Mendix
+# 🌌 OmniViz: Universal Data Visualization & Geospatial Maps for Mendix
 
-**FastViz** is an enterprise-grade, mobile-responsive visualization widget for Mendix. It wraps the performance of **Apache ECharts** (Canvas & WebGL rendering) with the mathematical precision of **D3.js** and high-contrast design patterns inspired by **Uber Vis** and **deck.gl**.
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Built with: ECharts](https://img.shields.io/badge/Render%20Engine-Apache%20ECharts-red.svg)](https://echarts.apache.org/)
+[![D3 Math: v7](https://img.shields.io/badge/Math%20%26%20Scales-D3.js-orange.svg)](https://d3js.org/)
+[![Mendix: 9.x & 10.x](https://img.shields.io/badge/Mendix-9.x%20%2F%2010.x-004B87.svg)](https://marketplace.mendix.com/)
+
+**OmniViz** is an all-in-one, hardware-accelerated visualization and mapping engine built as a Mendix Pluggable Widget. It combines the raw 60 FPS performance of **Apache ECharts** (Canvas & WebGL) with the precision of **D3.js** math and the high-contrast aesthetic of **Uber’s visualization design system** (`react-vis`, `deck.gl`).
 
 ---
 
-## ⚡ Highlights
+## ⚡ Key Highlights
 
-- **Blazing Fast Canvas & WebGL Engine**: Easily renders 10,000 to 100,000+ data points at 60 FPS without DOM lag.
-- **Dual Data Ingestion Routes**:
+- **Blazing Fast Canvas & WebGL Engine**: Renders 10,000 to 100,000+ data points at 60 FPS without crashing or slowing down mobile DOMs.
+- **Dual Data Ingestion Modes**:
   - **Route A (Mendix Datasource)**: Low-code plug & play via XPath, Microflow, Nanoflow, Database, or Association.
   - **Route B (REST API / Dynamic JSON)**: Direct API endpoint fetching with optional auto-refresh polling intervals for live IoT / operational dashboards.
 - **Geospatial & Map Support**:
@@ -19,8 +24,8 @@
   - Touch crosshair tooltips and auto-scrolling mobile legends.
 - **Uber-Inspired Themes**:
   - `Uber Dark` (Signature high-contrast dark mode)
-  - `Enterprise Clean` (Crisp light mode)
-  - `Cyber Neon` (Vibrant tech aesthetic)
+  - `Enterprise Clean Light` (Crisp daylight portal)
+  - `Cyber Neon` (Glowing cyberpunk aesthetic)
   - `D3 Viridis` & `D3 Turbo` (Perceptually uniform color ramps)
   - `Pastel Minimal`
 - **Low-Code Event Bridge**:
@@ -35,28 +40,25 @@
 | :--- | :--- | :--- |
 | **Standard 2D** | `Bar`, `Horizontal Bar`, `Stacked Bar`, `Line`, `Area`, `Stacked Area`, `Scatter / Bubble` | Financial trends, KPI comparisons, distributions, time-series |
 | **Categorical & Circular** | `Pie / Donut`, `Nightingale Rose` | Budget breakdowns, market share, cyclical metrics |
-| **Hierarchical & Flow** | `Treemap`, `Sunburst`, `Radar / Spider`, `Funnel` | Multi-level categories, competency profiles, sales funnels |
+| **Hierarchical & Flow** | `Treemap`, `Sunburst`, `Radar / Spider`, `Funnel`, `Heatmap Matrix`, `Sankey` | Multi-level categories, competency profiles, sales funnels |
 | **Status & Single-Value** | `Gauge / Speedometer` | Performance metrics, speed, completion percentages |
+| **Financial** | `Candlestick (OHLC)` | Stock / commodity Open, High, Low, Close |
 | **Geospatial & Maps** | `Geo Map (Choropleth)`, `Geo Scatter / Bubble Map` | Regional sales, fleet locations, supply chain distribution |
 
 ---
 
 ## 🚀 Quick Start: Installation in Mendix Studio Pro
 
-1. Run the build script in this repository:
-   ```bash
-   npm run build
-   ```
-2. Copy the generated `.mpk` package:
+1. Download or copy the prebuilt widget package:
    ```text
-   dist/FastViz.mpk
+   dist/OmniViz.mpk
    ```
-3. Paste `FastViz.mpk` into your Mendix application's `widgets/` folder:
+2. Paste `OmniViz.mpk` into your Mendix project's `widgets/` directory:
    ```text
-   <Your-Mendix-App>/widgets/FastViz.mpk
+   <Your-Mendix-App>/widgets/OmniViz.mpk
    ```
-4. In Mendix Studio Pro, press **F4** (Synchronize Project Directory).
-5. Open any Page, search for **FastViz Modern Charts & Maps** in the Toolbox, and drag it onto your layout.
+3. In Mendix Studio Pro, press **F4** (Synchronize Project Directory).
+4. Open any Page, search for **OmniViz Universal Visualizations & Maps** in the Toolbox, and drag it onto your layout.
 
 ---
 
@@ -114,14 +116,14 @@ Expected JSON array shape:
    - **Custom Tooltip / Label**: Location name or details (e.g. `WarehouseName`).
 
 #### C. Custom GeoJSON (States, Provinces, Custom Regions)
-Under the **Map & Geospatial** tab, set **Custom GeoJSON URL** to any public or internal GeoJSON URL (e.g., GeoJSON for US States, European Countries, or City Boundaries). FastViz will automatically download, cache, and render the custom boundary geometry!
+Under the **Map & Geospatial** tab, set **Custom GeoJSON URL** to any public or internal GeoJSON URL (e.g., GeoJSON for US States, European Countries, or City Boundaries). OmniViz will automatically download, cache, and render the custom boundary geometry!
 
 ---
 
 ### 4. Advanced: Custom ECharts JSON Override
 
 For power users who want 100% custom styling or niche ECharts extensions:
-In the **Advanced Options** tab, pass a JSON string to **Custom ECharts JSON Override**. FastViz will deep-merge your configuration directly with the chart options before rendering:
+In the **Advanced Options** tab, pass a JSON string to **Custom ECharts JSON Override**. OmniViz will deep-merge your configuration directly with the chart options before rendering:
 
 ```json
 {

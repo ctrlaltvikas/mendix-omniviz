@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<widget id="com.mendix.widget.custom.fastviz.FastViz" pluginWidget="true" needsEntityContext="true"
+<widget id="com.mendix.widget.custom.omniviz.OmniViz" pluginWidget="true" needsEntityContext="true"
         xmlns="http://www.mendix.com/widget/1.0/">
-    <name>FastViz Visualizations &amp; Maps</name>
-    <description>Blazing fast, responsive data visualizations and geospatial maps powered by ECharts and D3.</description>
+    <name>OmniViz Universal Visualizations &amp; Maps</name>
+    <description>Universal, blazing fast data visualizations and geospatial maps powered by ECharts and D3.</description>
     <icon/>
     <properties>
         <!-- TAB 1: CHART TYPE & THEME -->

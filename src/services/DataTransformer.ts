@@ -91,7 +91,7 @@ export class DataTransformer {
             try {
                 rawData = JSON.parse(jsonInput);
             } catch (e) {
-                console.error("FastViz: Failed to parse API JSON input", e);
+                console.error("OmniViz: Failed to parse API JSON input", e);
                 return [];
             }
         }
