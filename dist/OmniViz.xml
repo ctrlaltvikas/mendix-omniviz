@@ -2,7 +2,7 @@
 <widget id="com.mendix.widget.custom.omniviz.OmniViz" pluginWidget="true" needsEntityContext="true"
         xmlns="http://www.mendix.com/widget/1.0/">
     <name>OmniViz Universal Visualizations &amp; Maps</name>
-    <description>Universal, blazing fast data visualizations and geospatial maps powered by ECharts and D3.</description>
+    <description>Universal, blazing fast data visualizations, geospatial maps, and hierarchical drill-down performance analytics powered by ECharts and D3.</description>
     <icon/>
     <properties>
         <!-- TAB 1: CHART TYPE & THEME -->
@@ -12,12 +12,12 @@
                 <description>Select the visualization family</description>
                 <enumerationValues>
                     <enumerationValue key="bar">Bar (Vertical)</enumerationValue>
-                    <enumerationValue key="horizontalBar">Horizontal Bar</enumerationValue>
+                    <enumerationValue key="horizontalBar">Horizontal Bar (Leaderboard)</enumerationValue>
                     <enumerationValue key="stackedBar">Stacked Bar</enumerationValue>
                     <enumerationValue key="line">Line / Trend</enumerationValue>
                     <enumerationValue key="area">Area (Filled Gradient)</enumerationValue>
                     <enumerationValue key="stackedArea">Stacked Area</enumerationValue>
-                    <enumerationValue key="scatter">Scatter / Bubble Plot</enumerationValue>
+                    <enumerationValue key="scatter">Scatter / Performance Matrix</enumerationValue>
                     <enumerationValue key="pie">Pie / Donut</enumerationValue>
                     <enumerationValue key="rose">Nightingale Rose Chart</enumerationValue>
                     <enumerationValue key="radar">Radar / Spider Chart</enumerationValue>
@@ -56,9 +56,9 @@
                 <description>Chart subtitle</description>
             </property>
 
-            <property key="height" type="string" defaultValue="420px">
+            <property key="height" type="string" defaultValue="440px">
                 <caption>Widget Height</caption>
-                <description>Height in px or % (e.g., 420px, 100%, 500px)</description>
+                <description>Height in px or % (e.g., 440px, 100%, 500px)</description>
             </property>
         </propertyGroup>
 
@@ -80,8 +80,8 @@
             </property>
 
             <property key="xAttribute" type="attribute" dataSource="mendixDatasource" required="false">
-                <caption>X / Dimension / Category / Region Name</caption>
-                <description>Primary dimension or category attribute</description>
+                <caption>X / Dimension / Region Name (e.g. State / District / Village)</caption>
+                <description>Primary dimension or region attribute</description>
                 <attributeTypes>
                     <attributeType name="String"/>
                     <attributeType name="DateTime"/>
@@ -92,7 +92,7 @@
             </property>
 
             <property key="yAttribute" type="attribute" dataSource="mendixDatasource" required="false">
-                <caption>Y / Measure / Value</caption>
+                <caption>Y / Measure / Value (e.g. Disbursement / Achievement %)</caption>
                 <description>Numerical value / measure for the chart</description>
                 <attributeTypes>
                     <attributeType name="Integer"/>
@@ -103,19 +103,48 @@
 
             <property key="seriesAttribute" type="attribute" dataSource="mendixDatasource" required="false">
                 <caption>Series / Group By (Optional)</caption>
-                <description>Category to group multiple series (e.g. Region, Department, Product)</description>
+                <description>Category to group multiple series (e.g. Scheme, Sector, Bank)</description>
                 <attributeTypes>
                     <attributeType name="String"/>
                 </attributeTypes>
             </property>
 
             <property key="secondaryAttribute" type="attribute" dataSource="mendixDatasource" required="false">
-                <caption>Secondary Measure (Bubble Size / Target / Max)</caption>
-                <description>Used for scatter bubble size, gauge max target, or secondary metrics</description>
+                <caption>Secondary Measure (Target / Total Eligible Population)</caption>
+                <description>Used for scatter performance matrix, bubble size, or target comparison</description>
                 <attributeTypes>
                     <attributeType name="Integer"/>
                     <attributeType name="Long"/>
                     <attributeType name="Decimal"/>
+                </attributeTypes>
+            </property>
+
+            <!-- Hierarchy attributes for National -> State -> District -> Village drill-down -->
+            <property key="idAttribute" type="attribute" dataSource="mendixDatasource" required="false">
+                <caption>Region ID / Code (e.g. State/District Census Code)</caption>
+                <description>Unique identifier for hierarchical matching</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
+                    <attributeType name="Integer"/>
+                    <attributeType name="Long"/>
+                </attributeTypes>
+            </property>
+
+            <property key="parentIdAttribute" type="attribute" dataSource="mendixDatasource" required="false">
+                <caption>Parent Region ID / Code (For Hierarchical Drill)</caption>
+                <description>Parent ID linking District to State, or Village to District</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
+                    <attributeType name="Integer"/>
+                    <attributeType name="Long"/>
+                </attributeTypes>
+            </property>
+
+            <property key="levelAttribute" type="attribute" dataSource="mendixDatasource" required="false">
+                <caption>Level (e.g. National, State, District, Village)</caption>
+                <description>Administrative level of the record</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
                 </attributeTypes>
             </property>
 
@@ -163,11 +192,68 @@
             </property>
         </propertyGroup>
 
-        <!-- TAB 3: MAP SETTINGS -->
+        <!-- TAB 3: BENCHMARK & PERFORMANCE ANALYTICS -->
+        <propertyGroup caption="Benchmark &amp; Analytics">
+            <property key="enableBenchmarkLine" type="boolean" defaultValue="false">
+                <caption>Enable Benchmark Reference Line</caption>
+                <description>Renders a benchmark/average line (e.g., National or State average)</description>
+            </property>
+
+            <property key="benchmarkValue" type="expression" required="false">
+                <caption>Benchmark Value (Average / Target)</caption>
+                <description>Numerical value for the reference benchmark line (e.g. 75% or 100000)</description>
+                <returnType type="Decimal"/>
+            </property>
+
+            <property key="benchmarkLabel" type="string" required="false" defaultValue="Target / Benchmark">
+                <caption>Benchmark Line Label</caption>
+                <description>Label displayed next to the reference line</description>
+            </property>
+
+            <property key="enableRAGColoring" type="boolean" defaultValue="false">
+                <caption>Enable RAG Performance Coloring (Red/Amber/Green)</caption>
+                <description>Dynamically colors bars/regions based on performance thresholds to highlight low/high performers</description>
+            </property>
+
+            <property key="ragRedThreshold" type="expression" required="false">
+                <caption>Red Threshold (Below = Underperforming Alert)</caption>
+                <description>Values below this are marked Red (critical attention needed). Default 60.</description>
+                <returnType type="Decimal"/>
+            </property>
+
+            <property key="ragGreenThreshold" type="expression" required="false">
+                <caption>Green Threshold (Above = Star Performer)</caption>
+                <description>Values above this are marked Green (high performance). Default 90.</description>
+                <returnType type="Decimal"/>
+            </property>
+
+            <property key="sortMode" type="enumeration" defaultValue="none">
+                <caption>Performance Sorting / Leaderboard</caption>
+                <description>Sort bars to identify high vs low performers</description>
+                <enumerationValues>
+                    <enumerationValue key="none">Default (Datasource Order)</enumerationValue>
+                    <enumerationValue key="descending">Ranked: Top Performers First (Leaderboard)</enumerationValue>
+                    <enumerationValue key="ascending">Ranked: Lowest Performers First (Priority Intervention)</enumerationValue>
+                    <enumerationValue key="topBottomN">Isolate: Top N and Bottom N Extremes</enumerationValue>
+                </enumerationValues>
+            </property>
+
+            <property key="topBottomCount" type="integer" defaultValue="5">
+                <caption>Top / Bottom N Count</caption>
+                <description>Number of top and bottom items to show when 'Isolate: Top N and Bottom N Extremes' is selected</description>
+            </property>
+
+            <property key="enableBreadcrumb" type="boolean" defaultValue="true">
+                <caption>Enable Drill-Down Breadcrumbs</caption>
+                <description>Displays an interactive breadcrumb trail (e.g. All &gt; Maharashtra &gt; Pune) with instant back navigation</description>
+            </property>
+        </propertyGroup>
+
+        <!-- TAB 4: MAP SETTINGS -->
         <propertyGroup caption="Map &amp; Geospatial">
             <property key="mapGeoJsonUrl" type="expression" required="false">
                 <caption>Custom GeoJSON URL</caption>
-                <description>URL to fetch custom country/state/city GeoJSON. Defaults to built-in world map if left blank.</description>
+                <description>URL to fetch custom state/district GeoJSON. Defaults to built-in world/India map if left blank.</description>
                 <returnType type="String"/>
             </property>
 
@@ -187,7 +273,7 @@
             </property>
         </propertyGroup>
 
-        <!-- TAB 4: RESPONSIVENESS & INTERACTIVITY -->
+        <!-- TAB 5: RESPONSIVENESS & INTERACTIVITY -->
         <propertyGroup caption="Responsive &amp; Controls">
             <property key="legendPosition" type="enumeration" defaultValue="top">
                 <caption>Legend Position</caption>
@@ -223,11 +309,11 @@
 
             <property key="onClickAction" type="action" dataSource="mendixDatasource" required="false">
                 <caption>On Data Point Click Action</caption>
-                <description>Microflow or Nanoflow to execute when a user clicks a bar, point, pie slice, or map pin</description>
+                <description>Microflow or Nanoflow to execute when clicking a data item</description>
             </property>
         </propertyGroup>
 
-        <!-- TAB 5: ADVANCED JSON OVERRIDE -->
+        <!-- TAB 6: ADVANCED JSON OVERRIDE -->
         <propertyGroup caption="Advanced Options">
             <property key="customJsonOptions" type="expression" required="false">
                 <caption>Custom ECharts JSON Override</caption>

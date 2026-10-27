@@ -1,4 +1,7 @@
 export interface ParsedDataPoint {
+    id: string;
+    parentId?: string;
+    level?: string;
     x: string | number | Date;
     y: number;
     seriesName: string;
@@ -7,6 +10,7 @@ export interface ParsedDataPoint {
     lng?: number;
     tooltip?: string;
     originalItem?: any;
+    color?: string;
 }
 
 export interface TransformedChartData {
@@ -16,9 +20,15 @@ export interface TransformedChartData {
     geoData?: any[];
 }
 
-/**
- * Safely extracts a value from a Mendix ListAttributeValue or function
- */
+export interface DataFilterOptions {
+    activeParentId?: string;
+    sortMode?: "none" | "descending" | "ascending" | "topBottomN";
+    topBottomCount?: number;
+    enableRAGColoring?: boolean;
+    ragRedThreshold?: number;
+    ragGreenThreshold?: number;
+}
+
 function getMendixAttrValue(attr: any, item: any): any {
     if (!attr || !item) return undefined;
     try {
@@ -38,9 +48,6 @@ function getMendixAttrValue(attr: any, item: any): any {
 }
 
 export class DataTransformer {
-    /**
-     * Transforms Mendix List Items into structured data points
-     */
     static parseMendixItems(
         items: any[],
         xAttr?: any,
@@ -49,11 +56,14 @@ export class DataTransformer {
         secondaryAttr?: any,
         latAttr?: any,
         lngAttr?: any,
-        tooltipAttr?: any
+        tooltipAttr?: any,
+        idAttr?: any,
+        parentIdAttr?: any,
+        levelAttr?: any
     ): ParsedDataPoint[] {
         if (!items || !Array.isArray(items)) return [];
 
-        return items.map(item => {
+        return items.map((item, index) => {
             const rawX = getMendixAttrValue(xAttr, item);
             const rawY = getMendixAttrValue(yAttr, item);
             const rawSeries = getMendixAttrValue(seriesAttr, item);
@@ -61,13 +71,21 @@ export class DataTransformer {
             const rawLat = getMendixAttrValue(latAttr, item);
             const rawLng = getMendixAttrValue(lngAttr, item);
             const rawTooltip = getMendixAttrValue(tooltipAttr, item);
+            const rawId = getMendixAttrValue(idAttr, item);
+            const rawParentId = getMendixAttrValue(parentIdAttr, item);
+            const rawLevel = getMendixAttrValue(levelAttr, item);
 
             const numY = rawY !== null && rawY !== undefined ? Number(rawY) : 0;
             const numSecondary = rawSecondary !== null && rawSecondary !== undefined ? Number(rawSecondary) : undefined;
             const numLat = rawLat !== null && rawLat !== undefined ? Number(rawLat) : undefined;
             const numLng = rawLng !== null && rawLng !== undefined ? Number(rawLng) : undefined;
 
+            const fallbackId = String(rawId || rawX || `point-${index}`);
+
             return {
+                id: fallbackId,
+                parentId: rawParentId !== undefined && rawParentId !== null ? String(rawParentId) : undefined,
+                level: rawLevel ? String(rawLevel) : undefined,
                 x: rawX !== undefined && rawX !== null ? rawX : "",
                 y: isNaN(numY) ? 0 : numY,
                 seriesName: rawSeries ? String(rawSeries) : "Default",
@@ -80,9 +98,6 @@ export class DataTransformer {
         });
     }
 
-    /**
-     * Transforms an API JSON response or JSON string into structured data points
-     */
     static parseApiJson(jsonInput: any, jsonPathRoot?: string): ParsedDataPoint[] {
         if (!jsonInput) return [];
 
@@ -117,8 +132,14 @@ export class DataTransformer {
             const lat = item.lat ?? item.latitude;
             const lng = item.lng ?? item.longitude;
             const tooltip = item.tooltip ?? item.description;
+            const id = String(item.id ?? x);
+            const parentId = item.parentId ? String(item.parentId) : undefined;
+            const level = item.level ? String(item.level) : undefined;
 
             return {
+                id,
+                parentId,
+                level,
                 x,
                 y: isNaN(y) ? 0 : y,
                 seriesName: String(seriesName),
@@ -132,18 +153,73 @@ export class DataTransformer {
     }
 
     /**
-     * Converts parsed data points into ECharts categories & series representations
+     * Filters, sorts, and applies performance RAG coloring
      */
+    static processDataPoints(
+        points: ParsedDataPoint[],
+        options: DataFilterOptions
+    ): ParsedDataPoint[] {
+        let result = [...points];
+
+        // 1. Hierarchical Filter (if parent-child hierarchy exists)
+        const hasHierarchy = points.some(p => p.parentId !== undefined);
+        if (hasHierarchy) {
+            if (options.activeParentId) {
+                result = result.filter(p => p.parentId === options.activeParentId);
+            } else {
+                // Root view: items without parentId or level === 'National'
+                result = result.filter(p => !p.parentId || p.level?.toLowerCase() === "national");
+            }
+        }
+
+        // 2. Sorting & Performer Isolation
+        const sortMode = options.sortMode || "none";
+        if (sortMode === "descending") {
+            result.sort((a, b) => b.y - a.y);
+        } else if (sortMode === "ascending") {
+            result.sort((a, b) => a.y - b.y);
+        } else if (sortMode === "topBottomN") {
+            const count = options.topBottomCount || 5;
+            if (result.length > count * 2) {
+                const sorted = [...result].sort((a, b) => b.y - a.y);
+                const topN = sorted.slice(0, count);
+                const bottomN = sorted.slice(-count);
+                result = [...topN, ...bottomN];
+            }
+        }
+
+        // 3. Dynamic RAG Performance Coloring
+        const redThreshold = options.ragRedThreshold ?? 60;
+        const greenThreshold = options.ragGreenThreshold ?? 90;
+
+        if (options.enableRAGColoring) {
+            result = result.map(p => {
+                let color = "#f59e0b"; // Amber (On-track)
+                if (p.y < redThreshold) {
+                    color = "#ef4444"; // Red (Critical Alert / Underperforming)
+                } else if (p.y >= greenThreshold) {
+                    color = "#10b981"; // Green (Star Performer)
+                }
+                return { ...p, color };
+            });
+        }
+
+        return result;
+    }
+
     static buildEChartsStructure(
         dataPoints: ParsedDataPoint[],
         chartType: string
     ): TransformedChartData {
-        // Handle Map Choropleth
+        // Map Choropleth
         if (chartType === "geoMap") {
             const geoData = dataPoints.map(p => ({
                 name: String(p.x),
                 value: p.y,
-                originalItem: p.originalItem
+                id: p.id,
+                parentId: p.parentId,
+                originalItem: p.originalItem,
+                itemStyle: p.color ? { areaColor: p.color } : undefined
             }));
             return {
                 categories: [],
@@ -160,14 +236,17 @@ export class DataTransformer {
             };
         }
 
-        // Handle Map Geo Scatter
+        // Map Geo Scatter
         if (chartType === "geoScatter") {
             const geoScatterData = dataPoints
                 .filter(p => p.lat !== undefined && p.lng !== undefined)
                 .map(p => ({
                     name: String(p.x || p.tooltip || "Location"),
                     value: [p.lng, p.lat, p.y],
-                    originalItem: p.originalItem
+                    id: p.id,
+                    parentId: p.parentId,
+                    originalItem: p.originalItem,
+                    itemStyle: p.color ? { color: p.color } : undefined
                 }));
 
             return {
@@ -189,12 +268,14 @@ export class DataTransformer {
             };
         }
 
-        // Handle Pie / Rose / Funnel
+        // Pie / Rose / Funnel
         if (chartType === "pie" || chartType === "rose" || chartType === "funnel") {
             const pieData = dataPoints.map(p => ({
                 name: String(p.x),
                 value: p.y,
-                originalItem: p.originalItem
+                id: p.id,
+                originalItem: p.originalItem,
+                itemStyle: p.color ? { color: p.color } : undefined
             }));
 
             return {
@@ -215,9 +296,15 @@ export class DataTransformer {
             };
         }
 
-        // Handle Gauge
+        // Gauge
         if (chartType === "gauge") {
-            const primaryPoint = dataPoints[0] || { x: "Score", y: 0, secondary: 100 };
+            const primaryPoint: ParsedDataPoint = dataPoints[0] || {
+                id: "root",
+                x: "Score",
+                y: 0,
+                secondary: 100,
+                seriesName: "Default"
+            };
             return {
                 categories: [String(primaryPoint.x)],
                 series: [{
@@ -225,12 +312,16 @@ export class DataTransformer {
                     max: primaryPoint.secondary || 100,
                     progress: { show: true, width: 14 },
                     detail: { valueAnimation: true, formatter: "{value}" },
-                    data: [{ value: primaryPoint.y, name: String(primaryPoint.x) }]
+                    data: [{
+                        value: primaryPoint.y,
+                        name: String(primaryPoint.x),
+                        itemStyle: primaryPoint.color ? { color: primaryPoint.color } : undefined
+                    }]
                 }]
             };
         }
 
-        // Handle Radar
+        // Radar
         if (chartType === "radar") {
             const categories = Array.from(new Set(dataPoints.map(p => String(p.x))));
             const seriesNames = Array.from(new Set(dataPoints.map(p => p.seriesName)));
@@ -259,7 +350,7 @@ export class DataTransformer {
             };
         }
 
-        // Handle Treemap / Sunburst
+        // Treemap / Sunburst (Hierarchical)
         if (chartType === "treemap" || chartType === "sunburst") {
             const seriesNames = Array.from(new Set(dataPoints.map(p => p.seriesName)));
             const treeData = seriesNames.map(sName => {
@@ -268,7 +359,9 @@ export class DataTransformer {
                     .map(p => ({
                         name: String(p.x),
                         value: p.y,
-                        originalItem: p.originalItem
+                        id: p.id,
+                        originalItem: p.originalItem,
+                        itemStyle: p.color ? { color: p.color } : undefined
                     }));
                 return {
                     name: sName,
@@ -302,7 +395,17 @@ export class DataTransformer {
                 const pt = seriesMap.get(cat);
                 if (!pt) return 0;
                 if (chartType === "scatter") {
-                    return [cat, pt.y, pt.secondary || 15];
+                    return {
+                        value: [cat, pt.y, pt.secondary || 15],
+                        itemStyle: pt.color ? { color: pt.color } : undefined
+                    };
+                }
+                // Support individual data point styling (RAG colors)
+                if (pt.color) {
+                    return {
+                        value: pt.y,
+                        itemStyle: { color: pt.color }
+                    };
                 }
                 return pt.y;
             });
@@ -310,7 +413,9 @@ export class DataTransformer {
             return {
                 name: sName,
                 data,
-                itemMapping: categories.map(cat => seriesMap.get(cat)?.originalItem)
+                itemMapping: categories.map(cat => seriesMap.get(cat)?.originalItem),
+                idMapping: categories.map(cat => seriesMap.get(cat)?.id),
+                nameMapping: categories.map(cat => seriesMap.get(cat)?.x)
             };
         });
 

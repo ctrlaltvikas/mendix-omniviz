@@ -1,5 +1,6 @@
 import { createElement, FC, useMemo, useEffect, useState, useCallback } from "react";
 import { ResponsiveBox } from "./components/ResponsiveBox";
+import { BreadcrumbNav, BreadcrumbNode } from "./components/BreadcrumbNav";
 import { DataTransformer, ParsedDataPoint } from "./services/DataTransformer";
 import { getThemeConfig } from "./services/ThemeEngine";
 import { GeoMapService } from "./services/GeoMapService";
@@ -17,12 +18,24 @@ export interface OmniVizProps {
     yAttribute?: any;
     seriesAttribute?: any;
     secondaryAttribute?: any;
+    idAttribute?: any;
+    parentIdAttribute?: any;
+    levelAttribute?: any;
     latAttribute?: any;
     lngAttribute?: any;
     tooltipAttribute?: any;
     apiUrlOrJson?: { value?: string };
     apiRefreshInterval?: number;
     jsonPathRoot?: string;
+    enableBenchmarkLine?: boolean;
+    benchmarkValue?: { value?: number };
+    benchmarkLabel?: string;
+    enableRAGColoring?: boolean;
+    ragRedThreshold?: { value?: number };
+    ragGreenThreshold?: { value?: number };
+    sortMode?: "none" | "descending" | "ascending" | "topBottomN";
+    topBottomCount?: number;
+    enableBreadcrumb?: boolean;
     mapGeoJsonUrl?: { value?: string };
     mapVisualMin?: number;
     mapVisualMax?: number;
@@ -39,6 +52,12 @@ export interface OmniVizProps {
 export const OmniViz: FC<OmniVizProps> = (props) => {
     const [apiData, setApiData] = useState<any>(null);
     const [mapReady, setMapReady] = useState<boolean>(false);
+    const [drillPath, setDrillPath] = useState<BreadcrumbNode[]>([
+        { id: "ROOT", name: "National / All", level: "National" }
+    ]);
+
+    const activeNode = drillPath[drillPath.length - 1];
+    const activeParentId = activeNode.id === "ROOT" ? undefined : activeNode.id;
 
     // 1. Initialize Map engine if geo chart is requested
     useEffect(() => {
@@ -62,7 +81,6 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
             const rawVal = props.apiUrlOrJson?.value?.trim();
             if (!rawVal) return;
 
-            // Direct JSON string check
             if (rawVal.startsWith("[") || rawVal.startsWith("{")) {
                 try {
                     setApiData(JSON.parse(rawVal));
@@ -72,7 +90,6 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
                 return;
             }
 
-            // Otherwise, fetch as REST API URL
             try {
                 const res = await fetch(rawVal);
                 if (res.ok) {
@@ -93,8 +110,8 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
         }
     }, [props.dataRoute, props.apiUrlOrJson?.value, props.apiRefreshInterval]);
 
-    // 3. Parse Data Points from Mendix Datasource or API
-    const parsedDataPoints: ParsedDataPoint[] = useMemo(() => {
+    // 3. Raw Parsed Data Points
+    const rawDataPoints: ParsedDataPoint[] = useMemo(() => {
         if (props.dataRoute === "mendix") {
             const items = props.mendixDatasource?.items || [];
             return DataTransformer.parseMendixItems(
@@ -105,7 +122,10 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
                 props.secondaryAttribute,
                 props.latAttribute,
                 props.lngAttribute,
-                props.tooltipAttribute
+                props.tooltipAttribute,
+                props.idAttribute,
+                props.parentIdAttribute,
+                props.levelAttribute
             );
         } else {
             return DataTransformer.parseApiJson(apiData, props.jsonPathRoot);
@@ -120,22 +140,46 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
         props.latAttribute,
         props.lngAttribute,
         props.tooltipAttribute,
+        props.idAttribute,
+        props.parentIdAttribute,
+        props.levelAttribute,
         apiData,
         props.jsonPathRoot
     ]);
 
-    // 4. Transform into ECharts Structure
-    const transformed = useMemo(() => {
-        return DataTransformer.buildEChartsStructure(parsedDataPoints, props.chartType);
-    }, [parsedDataPoints, props.chartType]);
+    // 4. Process Data: Hierarchy drill-down filtering, sorting, and RAG performance coloring
+    const processedPoints: ParsedDataPoint[] = useMemo(() => {
+        return DataTransformer.processDataPoints(rawDataPoints, {
+            activeParentId,
+            sortMode: props.sortMode,
+            topBottomCount: props.topBottomCount,
+            enableRAGColoring: props.enableRAGColoring,
+            ragRedThreshold: props.ragRedThreshold?.value ? Number(props.ragRedThreshold.value) : 60,
+            ragGreenThreshold: props.ragGreenThreshold?.value ? Number(props.ragGreenThreshold.value) : 90
+        });
+    }, [
+        rawDataPoints,
+        activeParentId,
+        props.sortMode,
+        props.topBottomCount,
+        props.enableRAGColoring,
+        props.ragRedThreshold?.value,
+        props.ragGreenThreshold?.value
+    ]);
 
-    // 5. Build Complete High-Performance ECharts Option
+    // 5. Transform into ECharts Structure
+    const transformed = useMemo(() => {
+        return DataTransformer.buildEChartsStructure(processedPoints, props.chartType);
+    }, [processedPoints, props.chartType]);
+
+    // 6. Build Complete High-Performance ECharts Option
+    const theme = useMemo(() => getThemeConfig(props.themePreset || "uberDark"), [props.themePreset]);
+
     const option = useMemo(() => {
-        const theme = getThemeConfig(props.themePreset || "uberDark");
         const chartType = props.chartType || "bar";
         const isCartesian = ["bar", "horizontalBar", "stackedBar", "line", "area", "stackedArea", "scatter"].includes(chartType);
+        const isHorizontal = chartType === "horizontalBar";
 
-        // Legend configuration
         const legendPos = props.legendPosition || "top";
         const legendConfig = legendPos === "none" ? { show: false } : {
             show: true,
@@ -145,10 +189,9 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
             left: legendPos === "left" ? 10 : undefined,
             right: legendPos === "right" ? 10 : undefined,
             textStyle: { color: theme.textColor, fontSize: 12 },
-            type: "scroll" // Auto horizontal scroll for mobile
+            type: "scroll"
         };
 
-        // Toolbox controls
         const toolboxConfig = props.showToolbox ? {
             show: true,
             right: 15,
@@ -161,13 +204,17 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
             }
         } : undefined;
 
-        // Base options
+        // Dynamic subtitle reflecting active drill level
+        const currentSubtitle = drillPath.length > 1
+            ? `${props.subtitle || ""} [Level: ${activeNode.name}]`
+            : props.subtitle || "";
+
         const baseOption: any = {
             backgroundColor: theme.background,
             color: theme.colorPalette,
             title: props.title ? {
                 text: props.title,
-                subtext: props.subtitle || "",
+                subtext: currentSubtitle,
                 left: 15,
                 top: 10,
                 textStyle: { color: theme.textColor, fontWeight: "600", fontSize: 16 },
@@ -183,7 +230,7 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
                     if (Array.isArray(params)) {
                         let res = `<div style="font-weight:600;margin-bottom:4px;">${params[0]?.axisValue || ""}</div>`;
                         params.forEach((p: any) => {
-                            const valStr = D3Formatters.formatSmartNumber(p.value);
+                            const valStr = D3Formatters.formatSmartNumber(typeof p.value === "object" ? p.value?.value : p.value);
                             res += `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
                                 <span>${p.marker} ${p.seriesName}</span>
                                 <span style="font-weight:600;">${valStr}</span>
@@ -191,14 +238,15 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
                         });
                         return res;
                     }
-                    return `${params.name}: <b>${D3Formatters.formatSmartNumber(params.value)}</b>`;
+                    const rawVal = typeof params.value === "object" ? params.value?.value : params.value;
+                    return `${params.name}: <b>${D3Formatters.formatSmartNumber(rawVal)}</b>`;
                 }
             },
             legend: legendConfig,
             toolbox: toolboxConfig
         };
 
-        // Handle Map Choropleth & Geo Scatter
+        // Map Choropleth & Geo Scatter
         if (chartType === "geoMap" || chartType === "geoScatter") {
             const mapName = props.mapGeoJsonUrl?.value ? "userGeoMap" : "world";
             baseOption.geo = {
@@ -229,7 +277,7 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
             return baseOption;
         }
 
-        // Handle Radar
+        // Radar
         if (chartType === "radar") {
             baseOption.radar = {
                 indicator: transformed.radarIndicators || [],
@@ -242,7 +290,7 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
             return baseOption;
         }
 
-        // Handle Pie / Rose / Gauge / Funnel / Treemap / Sunburst
+        // Non-Cartesian
         if (!isCartesian) {
             baseOption.series = transformed.series;
             return baseOption;
@@ -252,7 +300,7 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
         const hasTitle = Boolean(props.title);
         baseOption.grid = {
             left: "3%",
-            right: "4%",
+            right: "5%",
             top: hasTitle ? 65 : 45,
             bottom: props.enableDataZoom ? 55 : 25,
             containLabel: true
@@ -270,18 +318,22 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
                     textStyle: { color: theme.subTextColor }
                 },
                 {
-                    type: "inside" // Native touch pinch-to-zoom & drag for mobile
+                    type: "inside"
                 }
             ];
         }
 
         // Axes definition
-        const isHorizontal = chartType === "horizontalBar";
         const categoryAxis = {
             type: "category",
             data: transformed.categories,
             axisLine: { lineStyle: { color: theme.axisColor } },
-            axisLabel: { color: theme.subTextColor, fontSize: 11 }
+            axisLabel: {
+                color: theme.subTextColor,
+                fontSize: 11,
+                interval: 0,
+                rotate: transformed.categories.length > 8 && !isHorizontal ? 35 : 0
+            }
         };
         const valueAxis = {
             type: "value",
@@ -296,12 +348,37 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
         baseOption.xAxis = isHorizontal ? valueAxis : categoryAxis;
         baseOption.yAxis = isHorizontal ? categoryAxis : valueAxis;
 
-        // Series definition
+        // Series definition & Benchmark Reference Line
         const isStacked = chartType === "stackedBar" || chartType === "stackedArea";
         const isArea = chartType === "area" || chartType === "stackedArea";
         const isLine = chartType === "line" || isArea;
 
-        baseOption.series = transformed.series.map(s => {
+        // Benchmark line setup
+        const benchmarkNum = props.benchmarkValue?.value !== undefined ? Number(props.benchmarkValue.value) : undefined;
+        const markLineConfig = (props.enableBenchmarkLine && benchmarkNum !== undefined) ? {
+            silent: true,
+            symbol: ["none", "none"],
+            lineStyle: {
+                type: "dashed",
+                width: 2,
+                color: "#f43f5e"
+            },
+            label: {
+                show: true,
+                position: isHorizontal ? "end" : "end",
+                formatter: `${props.benchmarkLabel || "Benchmark"}: ${D3Formatters.formatSmartNumber(benchmarkNum)}`,
+                color: theme.textColor,
+                fontSize: 11,
+                fontWeight: "bold"
+            },
+            data: [
+                isHorizontal
+                    ? { xAxis: benchmarkNum }
+                    : { yAxis: benchmarkNum }
+            ]
+        } : undefined;
+
+        baseOption.series = transformed.series.map((s, idx) => {
             const actualType = (chartType === "horizontalBar" || chartType === "stackedBar") ? "bar" : (isLine ? "line" : chartType);
             return {
                 ...s,
@@ -310,7 +387,8 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
                 smooth: isLine ? Boolean(props.smoothCurves) : false,
                 areaStyle: isArea ? { opacity: 0.35 } : undefined,
                 emphasis: { focus: "series" },
-                barMaxWidth: 48
+                barMaxWidth: 48,
+                markLine: idx === 0 ? markLineConfig : undefined
             };
         });
 
@@ -327,7 +405,6 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
         return baseOption;
     }, [
         props.chartType,
-        props.themePreset,
         props.title,
         props.subtitle,
         props.legendPosition,
@@ -338,36 +415,72 @@ export const OmniViz: FC<OmniVizProps> = (props) => {
         props.mapRoam,
         props.mapVisualMin,
         props.mapVisualMax,
+        props.enableBenchmarkLine,
+        props.benchmarkValue?.value,
+        props.benchmarkLabel,
         transformed,
+        theme,
+        drillPath,
+        activeNode.name,
         props.customJsonOptions?.value
     ]);
 
-    // 6. Handle Data Point Click Event (Bridge to Mendix Microflow / Nanoflow)
+    // 7. Handle Data Point Click Event & Hierarchical Drill-Down
     const handlePointClick = useCallback((params: any) => {
-        if (!props.onClickAction) return;
-
-        // Find the matching Mendix Object
+        let clickedId: string | undefined;
+        let clickedName: string | undefined;
         let matchedItem: any = null;
 
-        if (transformed.series?.[params.seriesIndex]?.itemMapping) {
-            matchedItem = transformed.series[params.seriesIndex].itemMapping[params.dataIndex];
-        } else if (transformed.series?.[params.seriesIndex]?.data?.[params.dataIndex]?.originalItem) {
-            matchedItem = transformed.series[params.seriesIndex].data[params.dataIndex].originalItem;
-        } else if (transformed.geoData?.[params.dataIndex]?.originalItem) {
-            matchedItem = transformed.geoData[params.dataIndex].originalItem;
+        const seriesObj = transformed.series?.[params.seriesIndex];
+        if (seriesObj?.idMapping) {
+            clickedId = seriesObj.idMapping[params.dataIndex];
+            clickedName = seriesObj.nameMapping?.[params.dataIndex];
+            matchedItem = seriesObj.itemMapping?.[params.dataIndex];
+        } else if (transformed.geoData?.[params.dataIndex]) {
+            const geoItem = transformed.geoData[params.dataIndex];
+            clickedId = geoItem.id;
+            clickedName = geoItem.name;
+            matchedItem = geoItem.originalItem;
         }
 
-        if (matchedItem && props.onClickAction.canExecute) {
+        // Check if there are children under this clicked node
+        if (clickedId) {
+            const hasChildren = rawDataPoints.some(p => p.parentId === clickedId);
+            if (hasChildren) {
+                setDrillPath(prev => [
+                    ...prev,
+                    { id: clickedId!, name: String(clickedName || clickedId) }
+                ]);
+            }
+        }
+
+        // Bridge to Mendix Microflow / Nanoflow
+        if (matchedItem && props.onClickAction && props.onClickAction.canExecute) {
             props.onClickAction.execute(matchedItem);
         }
-    }, [props.onClickAction, transformed]);
+    }, [props.onClickAction, transformed, rawDataPoints]);
+
+    // Handle Breadcrumb navigation back up the hierarchy
+    const handleBreadcrumbNavigate = useCallback((_node: BreadcrumbNode, index: number) => {
+        setDrillPath(prev => prev.slice(0, index + 1));
+    }, []);
 
     return (
-        <ResponsiveBox
-            option={option}
-            height={props.height || "420px"}
-            onPointClick={handlePointClick}
-        />
+        <div className="omni-viz-wrapper" style={{ width: "100%", position: "relative" }}>
+            {props.enableBreadcrumb && (
+                <BreadcrumbNav
+                    trail={drillPath}
+                    onNavigate={handleBreadcrumbNavigate}
+                    textColor={theme.textColor}
+                    subTextColor={theme.subTextColor}
+                />
+            )}
+            <ResponsiveBox
+                option={option}
+                height={props.height || "440px"}
+                onPointClick={handlePointClick}
+            />
+        </div>
     );
 };
 
