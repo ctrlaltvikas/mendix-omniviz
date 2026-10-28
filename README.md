@@ -38,47 +38,109 @@
 
 ---
 
-## 🏛️ Multi-Level Governance & NABARD Hierarchy Pattern
+## 💡 Quick Examples & Developer Recipes
 
-When building dashboards that go from **National ➔ State ➔ District ➔ Village**:
+### Example 1: The 30-Second Simple Bar Chart (Monthly Disbursement)
 
+A simple trend chart showing loan disbursements across months.
+
+#### A. In Mendix Domain Model:
+Create an entity **`MonthlyDisbursement`**:
+- `MonthName` *(String)*: `"Jan"`, `"Feb"`, `"Mar"`, `"Apr"`
+- `AmountInCr` *(Decimal)*: `12.5`, `18.2`, `14.0`, `22.8`
+
+#### B. Equivalent JSON (if using REST API Route):
+```json
+[
+  { "x": "Jan", "y": 12.5 },
+  { "x": "Feb", "y": 18.2 },
+  { "x": "Mar", "y": 14.0 },
+  { "x": "Apr", "y": 22.8 }
+]
 ```
-[National Level: India] ➔ Click "Maharashtra"
-       │
-       ▼
-[State Level: Maharashtra Districts] ➔ Click "Pune"
-       │
-       ▼
-[District Level: Pune Blocks & Villages] ➔ Identify Underperforming Gram Panchayats
-```
 
-### 1. How to Configure Hierarchical Drill-Down
-In Mendix Studio Pro:
-1. Map **Region ID / Code** (e.g. `DistrictCode` or `CensusCode`).
-2. Map **Parent Region ID** (e.g. `StateCode`).
-3. Set **Enable Drill-Down Breadcrumbs** to `true`.
-4. When an executive clicks a State, OmniViz immediately filters to that State's districts and renders a breadcrumb trail (`National ❯ Maharashtra`) with smooth transitions!
+#### C. In Mendix Studio Pro:
+- **X-Axis Attribute**: `MonthName`
+- **Y-Axis Attribute**: `AmountInCr`
+- **Chart Type**: `Bar` or `Line`
 
 ---
 
-## 🎯 Identifying Low vs. High Performers
+### Example 2: NABARD Hierarchy Drill-Down (State ➔ District) with Red/Green Outliers
 
-### 1. Benchmark Reference Line
-- Enable **Benchmark Reference Line**.
-- Pass **Benchmark Value** (e.g., `$currentEntity/StateAverageDisbursement` or `75.0`).
-- A prominent dashed target line is rendered across the chart, making it immediately visible which units exceed or fall behind the benchmark.
+An executive starts at the **State level**, clicks **Maharashtra**, drills down into **Districts**, and instantly spots underperforming red-flag districts.
 
-### 2. Dynamic RAG Coloring (Red / Amber / Green)
-- Enable **RAG Performance Coloring**.
-- Set **Red Threshold** (e.g. `60%`) — any district or village below this is highlighted in **Red** (`#ef4444`) to signal urgent field intervention.
-- Set **Green Threshold** (e.g. `90%`) — any district above this is highlighted in **Green** (`#10b981`) to recognize top performers.
-- Items between 60% and 90% appear in **Amber** (`#f59e0b`).
+#### A. In Mendix Domain Model:
+Create an entity **`RegionPerformance`**:
+- `RegionCode` *(String)*: Unique ID (`"MH"`, `"UP"`, `"DIST-PUNE"`, `"DIST-SATARA"`)
+- `ParentCode` *(String)*: Parent ID linking child to parent (`"MH"` for Pune)
+- `RegionName` *(String)*: Label (`"Maharashtra"`, `"Pune"`, `"Satara"`)
+- `AchievementRate` *(Decimal)*: Metric value in % (`82.0`, `54.0`, `94.0`, `52.0`)
 
-### 3. Performance Leaderboard & Top/Bottom N Isolation
-Under **Performance Sorting / Leaderboard**:
-- **Ranked: Top Performers First**: Sorts highest to lowest.
-- **Ranked: Lowest Performers First**: Flags lowest achievement units first.
-- **Isolate: Top N and Bottom N Extremes**: Trims middle noise to isolate the 5 best champions and 5 most critical underperformers.
+#### B. Equivalent JSON Payload:
+```json
+[
+  /* --- LEVEL 1: STATES (No parentId) --- */
+  { "id": "MH", "x": "Maharashtra",   "y": 82.0, "level": "State" },
+  { "id": "UP", "x": "Uttar Pradesh", "y": 54.0, "level": "State" },
+
+  /* --- LEVEL 2: DISTRICTS OF MAHARASHTRA (parentId = "MH") --- */
+  { "id": "PUN", "parentId": "MH", "x": "Pune District",   "y": 94.0, "level": "District" },
+  { "id": "SAT", "parentId": "MH", "x": "Satara District", "y": 52.0, "level": "District" }
+]
+```
+
+#### C. In Mendix Studio Pro:
+1. **X-Axis Attribute**: `RegionName`
+2. **Y-Axis Attribute**: `AchievementRate`
+3. **Region ID Attribute**: `RegionCode`
+4. **Parent Region ID Attribute**: `ParentCode`
+5. Under **Benchmark & Analytics**:
+   - **Enable RAG Coloring**: `true`
+   - **Red Threshold**: `60` *(below 60% turns RED 🔴)*
+   - **Green Threshold**: `90` *(above 90% turns GREEN 🟢)*
+   - **Enable Benchmark Line**: `true` with value `75` *(State Target 75%)*
+   - **Enable Breadcrumbs**: `true`
+
+---
+
+### Example 3: Multi-Series Comparison (Target vs. Achieved by Sector)
+
+Comparing **Target vs. Actual Disbursement** across priority sectors.
+
+#### A. In Mendix Domain Model:
+Create an entity **`SectorComparison`**:
+- `Sector` *(String)*: `"Agriculture"`, `"MSME"`, `"Rural Housing"`
+- `DisbursementType` *(String)*: `"Target"` or `"Achieved"`
+- `Amount` *(Decimal)*: The numerical value
+
+#### B. Equivalent JSON Payload:
+```json
+[
+  { "x": "Agriculture",   "series": "Target",   "y": 150 },
+  { "x": "Agriculture",   "series": "Achieved", "y": 138 },
+  { "x": "MSME",          "series": "Target",   "y": 90  },
+  { "x": "MSME",          "series": "Achieved", "y": 96  },
+  { "x": "Rural Housing", "series": "Target",   "y": 60  },
+  { "x": "Rural Housing", "series": "Achieved", "y": 41  }
+]
+```
+
+#### C. In Mendix Studio Pro:
+- **X-Axis Attribute**: `Sector`
+- **Y-Axis Attribute**: `Amount`
+- **Series / Group By**: `DisbursementType`
+- **Chart Type**: `Bar` (or `Horizontal Bar (Leaderboard)`)
+
+---
+
+### 3-Step Cheat Sheet for Developers
+
+| Step | Action in Studio Pro |
+| :---: | :--- |
+| **1** | Drag **OmniViz** onto your page. |
+| **2** | Point **Datasource** to your entity list (e.g. `//MyEntity`). |
+| **3** | Select `X-Axis` (Label) and `Y-Axis` (Number). Done! |
 
 ---
 
@@ -107,6 +169,76 @@ Under **Performance Sorting / Leaderboard**:
    ```
 3. In Mendix Studio Pro, press **F4** (Synchronize Project Directory).
 4. Open any Page, search for **OmniViz Universal Visualizations & Maps** in the Toolbox, and drag it onto your layout.
+
+---
+
+## 🛠️ Configuration & Ingestion Details
+
+### 1. Route A: Plug & Play with Mendix Datasource (XPath)
+
+1. Set **Data Ingestion Mode** to `Mendix Datasource`.
+2. Select your **Mendix Datasource** (e.g. XPath: `//Sales.MonthlyRevenue[Year = 2026]`).
+3. Map the attributes:
+   - **X / Dimension**: Attribute representing the label or date (e.g. `MonthName`).
+   - **Y / Measure**: Numerical value attribute (e.g. `Revenue`).
+   - **Series / Group By (Optional)**: Attribute to split into multi-series (e.g. `Region` or `ProductCategory`).
+   - **On Data Point Click Action (Optional)**: Select a Microflow (e.g. `ACT_MonthlyRevenue_DrillDown`) to receive the clicked record.
+
+---
+
+### 2. Route B: Direct REST API / JSON Route
+
+For real-time operational telemetry or microservice data:
+
+1. Set **Data Ingestion Mode** to `Direct REST API / JSON Route`.
+2. Provide the **API Endpoint URL or JSON String**:
+   - URL example: `'https://api.mycompany.com/v1/telemetry/live'`
+   - Or a dynamic JSON string from a Microflow return value.
+3. **Auto Refresh Interval**: Set to `5` to poll the API every 5 seconds for live streaming dashboards (or `0` to disable).
+4. **JSON Path Root (Optional)**: If your API wraps data inside `{ "status": 200, "data": [...] }`, set this to `data`.
+
+---
+
+### 3. Geospatial & Map Visualizations
+
+#### A. Choropleth Map (Region / Country Heatmap)
+1. Set **Chart Type** to `Geospatial Map (Choropleth)`.
+2. In the Datasource, map:
+   - **X / Dimension**: Country or region name (e.g. `United States`, `United Kingdom`, `Germany`, `India`, `Japan`).
+   - **Y / Measure**: Numerical density or metric value (e.g. `UserCount`).
+3. Set **Map Value Range Min** and **Map Value Range Max** (e.g. `0` to `50000`).
+
+#### B. Geo Scatter / Bubble Map (Lat / Long Pins)
+1. Set **Chart Type** to `Geospatial Scatter / Bubble Map`.
+2. In the Datasource, map:
+   - **Latitude**: Coordinate attribute (e.g. `Lat`).
+   - **Longitude**: Coordinate attribute (e.g. `Lng`).
+   - **Y / Measure**: Pin magnitude / bubble size.
+   - **Custom Tooltip / Label**: Location name or details (e.g. `WarehouseName`).
+
+#### C. Custom GeoJSON (States, Provinces, Custom Regions)
+Under the **Map & Geospatial** tab, set **Custom GeoJSON URL** to any public or internal GeoJSON URL (e.g., GeoJSON for US States, European Countries, or City Boundaries). OmniViz will automatically download, cache, and render the custom boundary geometry!
+
+---
+
+### 4. Advanced: Custom ECharts JSON Override
+
+For power users who want 100% custom styling or niche ECharts extensions:
+In the **Advanced Options** tab, pass a JSON string to **Custom ECharts JSON Override**. OmniViz will deep-merge your configuration directly with the chart options before rendering:
+
+```json
+{
+  "series": [
+    {
+      "itemStyle": {
+        "borderRadius": [8, 8, 0, 0],
+        "shadowBlur": 10,
+        "shadowColor": "rgba(0, 210, 211, 0.5)"
+      }
+    }
+  ]
+}
+```
 
 ---
 
